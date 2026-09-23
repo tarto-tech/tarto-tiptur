@@ -1,0 +1,16 @@
+
+> tarto-app@0.1.0 dev
+> next dev
+
+▲ Next.js 16.3.6 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://10.129.82.202:3000
+- Environments: .env.local
+✓ Ready in 5.5s
+⚠ Warning: Next.js ignored package-lock.json in c:\Users\manoj_jaif3lg because it is outside the current Git repository (C:\Users\manoj_jaif3lg\projects\Tarto).
+ To use this directory, set `turbopack.root` in your Next.js config.
+
+✓ Running next.config.ts took 445ms
+Creating turbopack project { dir: 'c:\\Users\\manoj_jaif3lg\\projects\\Tarto', testMode: true }
+
+○ Compiling / ...
