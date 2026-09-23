@@ -14,3 +14,31 @@
 Creating turbopack project { dir: 'c:\\Users\\manoj_jaif3lg\\projects\\Tarto', testMode: true }
 
 ○ Compiling / ...
+ GET / 200 in 42s (next.js: 39.9s, application-code: 1853ms)
+ GET / 200 in 1800ms (next.js: 124ms, application-code: 1676ms)
+○ Compiling /admin/login ...
+ GET /admin/login 200 in 5.3s (next.js: 4.3s, application-code: 992ms)
+○ Compiling /admin/products ...
+ GET /admin/products 200 in 4.7s (next.js: 4.4s, application-code: 334ms)
+ GET /admin/login 200 in 334ms (next.js: 67ms, application-code: 267ms)
+ GET /admin/login 200 in 273ms (next.js: 50ms, application-code: 223ms)
+ GET /admin/login 200 in 175ms (next.js: 42ms, application-code: 133ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+○ Compiling /admin/orders ...
+ GET /admin/orders 200 in 6.6s (next.js: 6.4s, application-code: 220ms)
+ GET /admin/products 200 in 592ms (next.js: 153ms, application-code: 440ms)
+ GET / 200 in 1432ms (next.js: 79ms, application-code: 1353ms)
+○ Compiling /checkout ...
+ GET /checkout 200 in 4.5s (next.js: 4.3s, application-code: 172ms)
+[browser] Detected `scroll-behavior: smooth` on the `<html>` element. To disable smooth scrolling during route transitions, add `data-scroll-behavior="smooth"` to your <html> element. Learn more: https://nextjs.org/docs/messages/missing-data-scroll-behavior
+[browser] ⨯ unhandledRejection: Error: Map container is already initialized.
+    at MapPicker.useEffect (../../../../../C:/Users/manoj_jaif3lg/projects/Tarto/components/MapPicker.tsx:31:21)
+  29 |       })
+  30 |
+> 31 |       const map = L.map(mapRef.current!).setView([DEFAULT_LAT, DEFAULT_LNG], 13)
+     |                     ^
+  32 |       mapInstanceRef.current = map
+  33 |
+  34 |       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+ GET / 200 in 1088ms (next.js: 39ms, application-code: 1049ms)
+ GET /order/9c006903-b06c-4082-a0a2-ca3d42a1cc60 200 in 6.7s (next.js: 6.3s, application-code: 361ms)
