@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
+import Image from 'next/image'
 import { supabase } from '@/lib/supabase'
 import type { Product } from '@/lib/types'
 
-type ProductForm = { name: string; description: string; price: string; unit: string }
-const EMPTY_FORM: ProductForm = { name: '', description: '', price: '', unit: '' }
+type ProductForm = { name: string; description: string; price: string; unit: string; image_url: string }
+const EMPTY_FORM: ProductForm = { name: '', description: '', price: '', unit: '', image_url: '' }
 
 export default function AdminProductsPage() {
   const [products, setProducts] = useState<Product[]>([])
@@ -14,6 +15,9 @@ export default function AdminProductsPage() {
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [imageFile, setImageFile] = useState<File | null>(null)
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   async function fetchProducts() {
     const { data } = await (supabase.from('products') as any).select('*').order('created_at')
@@ -31,24 +35,51 @@ export default function AdminProductsPage() {
 
   function openEdit(product: Product) {
     setEditing(product)
-    setForm({ name: product.name, description: product.description ?? '', price: String(product.price), unit: product.unit })
+    setForm({ name: product.name, description: product.description ?? '', price: String(product.price), unit: product.unit, image_url: product.image_url ?? '' })
+    setImageFile(null)
+    setImagePreview(product.image_url ?? null)
     setShowForm(true)
   }
 
   function openAdd() {
     setEditing(null)
     setForm(EMPTY_FORM)
+    setImageFile(null)
+    setImagePreview(null)
     setShowForm(true)
+  }
+
+  function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImageFile(file)
+    setImagePreview(URL.createObjectURL(file))
   }
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
     setSaving(true)
+
+    let image_url = form.image_url || null
+
+    if (imageFile) {
+      const ext = imageFile.name.split('.').pop()
+      const path = `${Date.now()}.${ext}`
+      const { data: uploadData } = await supabase.storage
+        .from('product-images')
+        .upload(path, imageFile, { upsert: true })
+      if (uploadData) {
+        const { data: urlData } = supabase.storage.from('product-images').getPublicUrl(uploadData.path)
+        image_url = urlData.publicUrl
+      }
+    }
+
     const payload = {
       name: form.name,
       description: form.description || null,
       price: parseFloat(form.price),
       unit: form.unit,
+      image_url,
     }
     if (editing) {
       await (supabase.from('products') as any).update(payload).eq('id', editing.id)
@@ -105,6 +136,30 @@ export default function AdminProductsPage() {
                 className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
               />
             </div>
+            {/* Image upload */}
+            <div>
+              <label className="block text-sm font-medium mb-1">Product image</label>
+              <div
+                className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-[#2D6A4F] transition-colors"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                {imagePreview ? (
+                  <div className="relative h-32 w-full">
+                    <Image src={imagePreview} alt="preview" fill className="object-contain rounded-lg" unoptimized={imagePreview.startsWith('blob:')} />
+                  </div>
+                ) : (
+                  <div className="py-4 text-gray-400 text-sm">📷 Click to upload image</div>
+                )}
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageChange}
+              />
+            </div>
+
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium mb-1">Price (₹)</label>
@@ -157,6 +212,14 @@ export default function AdminProductsPage() {
           <div className="divide-y">
             {products.map(product => (
               <div key={product.id} className="flex items-center gap-3 px-4 py-3 flex-wrap">
+                {/* Thumbnail */}
+                <div className="w-10 h-10 rounded-lg bg-gray-100 overflow-hidden shrink-0 relative">
+                  {product.image_url ? (
+                    <Image src={product.image_url} alt={product.name} fill className="object-cover" />
+                  ) : (
+                    <div className="flex items-center justify-center h-full text-lg">🛒</div>
+                  )}
+                </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-medium text-sm truncate">{product.name}</p>
                   {product.description && (
