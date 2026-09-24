@@ -28,7 +28,7 @@ export default function AdminLoginPage() {
     <div className="min-h-screen bg-[#FAFAF8] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <span className="text-3xl font-bold text-[#2D6A4F]">tarto</span>
+          <span className="text-3xl font-bold text-[#2D6A4F]">Tarto</span>
           <p className="text-gray-500 text-sm mt-1">Admin Dashboard</p>
         </div>
         <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-4">

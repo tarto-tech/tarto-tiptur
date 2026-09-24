@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { useCart } from './CartContext'
 import type { Product } from '@/lib/types'
 
@@ -12,7 +11,7 @@ export default function ProductCard({ product }: { product: Product }) {
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden flex flex-col">
       <div className="relative h-40 bg-gray-50">
         {product.image_url ? (
-          <Image src={product.image_url} alt={product.name} fill className="object-cover" />
+          <img src={product.image_url} alt={product.name} className="w-full h-full object-cover" />
         ) : (
           <div className="flex items-center justify-center h-full text-4xl">🛒</div>
         )}

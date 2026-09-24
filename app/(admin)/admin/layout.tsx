@@ -42,7 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <nav className="sticky top-0 z-30 bg-white border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
-            <span className="text-lg font-bold text-[#2D6A4F]">tarto admin</span>
+            <span className="text-lg font-bold text-[#2D6A4F]">Tarto admin</span>
             <div className="flex gap-1">
               {navLinks.map(link => (
                 <Link

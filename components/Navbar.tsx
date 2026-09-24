@@ -13,7 +13,7 @@ export default function Navbar() {
     <>
       <nav className="sticky top-0 z-30 bg-white/90 backdrop-blur border-b border-gray-100">
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
-          <Link href="/" className="text-xl font-bold text-[#2D6A4F] tracking-tight">tarto</Link>
+          <Link href="/" className="text-xl font-bold text-[#2D6A4F] tracking-tight">Tarto</Link>
           <button
             onClick={() => setCartOpen(true)}
             className="relative flex items-center gap-1.5 bg-[#2D6A4F] text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-[#245a42] transition-colors"

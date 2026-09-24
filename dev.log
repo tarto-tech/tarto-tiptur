@@ -42,3 +42,12 @@ Creating turbopack project { dir: 'c:\\Users\\manoj_jaif3lg\\projects\\Tarto', t
   34 |       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
  GET / 200 in 1088ms (next.js: 39ms, application-code: 1049ms)
  GET /order/9c006903-b06c-4082-a0a2-ca3d42a1cc60 200 in 6.7s (next.js: 6.3s, application-code: 361ms)
+✓ Compiled in 3.7s
+ GET /admin/products 200 in 755ms (next.js: 335ms, application-code: 420ms)
+✓ Compiled in 567ms
+ GET /admin/products 200 in 336ms (next.js: 72ms, application-code: 263ms)
+ GET /admin/products 200 in 227ms (next.js: 27ms, application-code: 201ms)
+✓ Compiled in 436ms
+✓ Compiled in 266ms
+ GET /admin/products 200 in 207ms (next.js: 77ms, application-code: 130ms)
+ GET /admin/products 200 in 393ms (next.js: 31ms, application-code: 361ms)
