@@ -51,3 +51,5 @@ Creating turbopack project { dir: 'c:\\Users\\manoj_jaif3lg\\projects\\Tarto', t
 ✓ Compiled in 266ms
  GET /admin/products 200 in 207ms (next.js: 77ms, application-code: 130ms)
  GET /admin/products 200 in 393ms (next.js: 31ms, application-code: 361ms)
+ GET /admin/products 200 in 274ms (next.js: 90ms, application-code: 184ms)
+ GET /admin/products 200 in 171ms (next.js: 25ms, application-code: 146ms)

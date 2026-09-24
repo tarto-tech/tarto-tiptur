@@ -13,9 +13,12 @@ async function getProducts(): Promise<Product[]> {
   const { data } = await supabase
     .from('products')
     .select('*')
+    .eq('in_stock', true)
     .order('created_at')
   return data ?? []
 }
+
+export const dynamic = 'force-dynamic'
 
 export default async function HomePage() {
   const products = await getProducts()
