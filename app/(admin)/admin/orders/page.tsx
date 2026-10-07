@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { Order, OrderStatus, OrderItem } from '@/lib/types'
 
@@ -43,27 +43,78 @@ function formatTime(ts: string) {
   })
 }
 
+function playBeep() {
+  try {
+    const ctx = new (window.AudioContext || (window as any).webkitAudioContext)()
+    const osc = ctx.createOscillator()
+    const gain = ctx.createGain()
+    osc.connect(gain)
+    gain.connect(ctx.destination)
+    osc.type = 'sine'
+    osc.frequency.setValueAtTime(880, ctx.currentTime)
+    osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.15)
+    gain.gain.setValueAtTime(0.4, ctx.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5)
+    osc.start(ctx.currentTime)
+    osc.stop(ctx.currentTime + 0.5)
+  } catch {}
+}
+
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<OrderWithItems[]>([])
   const [tab, setTab] = useState<OrderStatus | 'all'>('all')
   const [expanded, setExpanded] = useState<string | null>(null)
   const [updating, setUpdating] = useState<string | null>(null)
+  const [soundEnabled, setSoundEnabled] = useState(true)
+  const [newOrderBanner, setNewOrderBanner] = useState<{ id: string; number: number } | null>(null)
+  const knownIds = useRef<Set<string>>(new Set())
+  const initialized = useRef(false)
 
   const fetchOrders = useCallback(async () => {
     const { data } = await (supabase.from('orders') as any)
       .select('*, order_items(*, products(name, unit))')
       .order('created_at', { ascending: false })
-    if (data) setOrders(data as OrderWithItems[])
-  }, [])
+    if (!data) return
+    const incoming = data as OrderWithItems[]
+
+    if (initialized.current) {
+      for (const o of incoming) {
+        if (!knownIds.current.has(o.id)) {
+          // New INSERT
+          if (soundEnabled) playBeep()
+          setNewOrderBanner({ id: o.id, number: o.order_number })
+        }
+      }
+    }
+
+    knownIds.current = new Set(incoming.map(o => o.id))
+    initialized.current = true
+    setOrders(incoming)
+  }, [soundEnabled])
 
   useEffect(() => {
     fetchOrders()
     const channel = supabase
       .channel('admin-orders')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, () => fetchOrders())
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'orders' }, () => fetchOrders())
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'orders' },
+        (payload: any) => {
+          if (payload.old?.payment_status === 'pending' && payload.new?.payment_status === 'paid') {
+            if (soundEnabled) playBeep()
+            setNewOrderBanner({ id: payload.new.id, number: payload.new.order_number })
+          }
+          fetchOrders()
+        }
+      )
       .subscribe()
     return () => { supabase.removeChannel(channel) }
-  }, [fetchOrders])
+  }, [fetchOrders, soundEnabled])
+
+  useEffect(() => {
+    if (!newOrderBanner) return
+    const t = setTimeout(() => setNewOrderBanner(null), 6000)
+    return () => clearTimeout(t)
+  }, [newOrderBanner])
 
   async function updateStatus(orderId: string, status: OrderStatus) {
     setUpdating(orderId)
@@ -76,7 +127,27 @@ export default function AdminOrdersPage() {
 
   return (
     <div>
-      <h1 className="text-xl font-bold mb-4">Orders</h1>
+      <div className="flex items-center justify-between mb-4">
+        <h1 className="text-xl font-bold">Orders</h1>
+        <button
+          onClick={() => setSoundEnabled(v => !v)}
+          className={`text-sm px-3 py-1.5 rounded-lg border font-medium transition-colors ${
+            soundEnabled ? 'bg-[#2D6A4F] text-white border-[#2D6A4F]' : 'bg-white text-gray-500 border-gray-200'
+          }`}
+        >
+          {soundEnabled ? '🔔 Sound: ON' : '🔕 Sound: OFF'}
+        </button>
+      </div>
+
+      {newOrderBanner && (
+        <div
+          className="mb-4 px-4 py-3 bg-orange-500 text-white rounded-xl text-sm font-medium flex items-center justify-between animate-pulse cursor-pointer"
+          onClick={() => { setExpanded(newOrderBanner.id); setTab('all'); setNewOrderBanner(null) }}
+        >
+          <span>🛎 New Order #{newOrderBanner.number} received! Tap to view.</span>
+          <button onClick={e => { e.stopPropagation(); setNewOrderBanner(null) }} className="ml-3 text-white/70 hover:text-white">✕</button>
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-1 flex-wrap mb-4">
