@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Geist } from 'next/font/google'
 import './globals.css'
 import { CartProvider } from '@/components/CartContext'
-import Navbar from '@/components/Navbar'
+import ConditionalNav from '@/components/ConditionalNav'
 
 const geist = Geist({ subsets: ['latin'] })
 
@@ -23,10 +23,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${geist.className} bg-[#FAFAF8] text-[#1A1A1A] antialiased`}>
+      <body className={`${geist.className} bg-[#F8F9FA] text-[#1A1A1A] antialiased`}>
         <CartProvider>
-          <Navbar />
-          <main>{children}</main>
+          <ConditionalNav />
+          {children}
         </CartProvider>
       </body>
     </html>

@@ -1,6 +1,6 @@
 'use client'
 
-import { createContext, useContext, useState, useCallback, ReactNode } from 'react'
+import { createContext, useContext, useState, useCallback, useEffect, ReactNode } from 'react'
 import type { CartItem, Product } from '@/lib/types'
 
 interface CartContextValue {
@@ -14,9 +14,26 @@ interface CartContextValue {
 }
 
 const CartContext = createContext<CartContextValue | null>(null)
+const STORAGE_KEY = 'tarto_cart'
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([])
+  const [hydrated, setHydrated] = useState(false)
+
+  // Load from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(STORAGE_KEY)
+      if (stored) setItems(JSON.parse(stored))
+    } catch {}
+    setHydrated(true)
+  }, [])
+
+  // Persist to localStorage on change
+  useEffect(() => {
+    if (!hydrated) return
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(items))
+  }, [items, hydrated])
 
   const add = useCallback((product: Product) => {
     setItems(prev => {
@@ -35,7 +52,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setItems(prev => prev.map(i => i.id === id ? { ...i, qty } : i))
   }, [])
 
-  const clear = useCallback(() => setItems([]), [])
+  const clear = useCallback(() => {
+    setItems([])
+    localStorage.removeItem(STORAGE_KEY)
+  }, [])
 
   const total = items.reduce((sum, i) => sum + i.price * i.qty, 0)
   const count = items.reduce((sum, i) => sum + i.qty, 0)

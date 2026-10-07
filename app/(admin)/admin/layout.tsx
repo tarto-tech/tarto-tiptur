@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import Link from 'next/link'
-import { supabase, signOut } from '@/lib/supabase'
+import { supabase } from '@/lib/supabase'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -60,7 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
           <button
-            onClick={() => signOut().then(() => router.push('/admin/login'))}
+            onClick={() => supabase.auth.signOut().then(() => router.push('/admin/login'))}
             className="text-sm text-gray-500 hover:text-gray-800"
           >
             Sign out

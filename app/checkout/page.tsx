@@ -1,88 +1,110 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import dynamic from 'next/dynamic'
 import { useCart } from '@/components/CartContext'
-import { supabase } from '@/lib/supabase'
-import type { Order, ServiceZone } from '@/lib/types'
 
-const MapPicker = dynamic(() => import('@/components/MapPicker'), { ssr: false })
+const DeliveryMap = dynamic(() => import('@/components/DeliveryMap'), { ssr: false })
 
-type ZoneState = { id: string; city: string } | 'outside' | null
+interface Zone { id: string; city: string }
+
+declare global {
+  interface Window { Razorpay: any }
+}
 
 export default function CheckoutPage() {
   const { items, total, clear } = useCart()
   const router = useRouter()
 
-  const [lat, setLat] = useState(13.2563)
-  const [lng, setLng] = useState(76.4762)
-  const [zone, setZone] = useState<ZoneState>(null)
-  const [checking, setChecking] = useState(false)
+  const [coords, setCoords] = useState({ lat: 13.2575, lng: 76.4800 })
+  const [zone, setZone] = useState<Zone | null | 'outside'>('outside')
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const checkTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const handleLocationSelect = useCallback(async (newLat: number, newLng: number) => {
-    setLat(newLat)
-    setLng(newLng)
-    setZone(null)
-
-    if (checkTimeout.current) clearTimeout(checkTimeout.current)
-    checkTimeout.current = setTimeout(async () => {
-      setChecking(true)
-      const { data } = await supabase.rpc('is_within_service_zone', { lat: newLat, lng: newLng } as any)
-      if (data) {
-        const { data: zoneData } = await supabase
-          .from('service_zones')
-          .select('id, city_name')
-          .eq('id', data as string)
-          .single()
-        const z = zoneData as Pick<ServiceZone, 'id' | 'city_name'> | null
-        setZone(z ? { id: z.id, city: z.city_name } : 'outside')
-      } else {
-        setZone('outside')
-      }
-      setChecking(false)
-    }, 600)
+  const handleZoneResult = useCallback((lat: number, lng: number, z: Zone | null) => {
+    setCoords({ lat, lng })
+    setZone(z ?? 'outside')
   }, [])
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!zone || zone === 'outside') return
-    if (items.length === 0) return
+  async function loadRazorpayScript(): Promise<boolean> {
+    if (window.Razorpay) return true
+    return new Promise(resolve => {
+      const script = document.createElement('script')
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+      script.onload = () => resolve(true)
+      script.onerror = () => resolve(false)
+      document.body.appendChild(script)
+    })
+  }
 
-    setSubmitting(true)
+  async function handlePay(e: React.FormEvent) {
+    e.preventDefault()
+    if (!zone || zone === 'outside' || items.length === 0) return
+
+    setLoading(true)
     setError('')
 
-    const result = await (supabase
-      .from('orders') as any)
-      .insert({
-        customer_name: name,
-        customer_phone: phone,
-        delivery_lat: lat,
-        delivery_lng: lng,
-        delivery_address_text: address,
-        service_zone_id: zone.id,
-        items: items.map(i => ({ product_id: i.id, name: i.name, price: i.price, qty: i.qty })),
-        total_amount: total,
+    try {
+      // 1. Create order on server
+      const res = await fetch('/api/razorpay/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: total,
+          items,
+          customerDetails: { name, phone, address },
+          coords,
+          zoneId: zone.id,
+        }),
       })
-      .select('id')
-      .single()
-    const data = result.data as Pick<Order, 'id'> | null
-    const err = result.error
+      const orderData = await res.json()
+      if (!res.ok) throw new Error(orderData.error)
 
-    if (err || !data) {
-      setError('Failed to place order. Please try again.')
-      setSubmitting(false)
-      return
+      // 2. Load Razorpay SDK
+      const loaded = await loadRazorpayScript()
+      if (!loaded) throw new Error('Failed to load payment SDK')
+
+      // 3. Open Razorpay modal
+      const rzp = new window.Razorpay({
+        key: orderData.keyId,
+        amount: orderData.amount,
+        currency: orderData.currency,
+        order_id: orderData.razorpayOrderId,
+        name: 'Tarto',
+        description: 'Fresh delivery — Tiptur',
+        prefill: { name, contact: phone },
+        theme: { color: '#2D6A4F' },
+        handler: async (response: any) => {
+          // 4. Verify payment on server
+          const verifyRes = await fetch('/api/razorpay/verify-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              orderId: orderData.orderId,
+              razorpayOrderId: response.razorpay_order_id,
+              razorpayPaymentId: response.razorpay_payment_id,
+              razorpaySignature: response.razorpay_signature,
+            }),
+          })
+          const verifyData = await verifyRes.json()
+          if (!verifyRes.ok) throw new Error(verifyData.error)
+
+          clear()
+          router.push(`/order/${orderData.orderId}`)
+        },
+        modal: {
+          ondismiss: () => setLoading(false),
+        },
+      })
+      rzp.open()
+    } catch (err: any) {
+      setError(err.message ?? 'Payment failed. Please try again.')
+      setLoading(false)
     }
-
-    clear()
-    router.push(`/order/${data.id}`)
   }
 
   if (items.length === 0) {
@@ -93,60 +115,35 @@ export default function CheckoutPage() {
     )
   }
 
+  const canPay = zone && zone !== 'outside' && name && phone && address
+
   return (
     <div className="max-w-lg mx-auto px-4 py-10">
       <h1 className="text-2xl font-bold mb-6">Checkout</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handlePay} className="space-y-6">
         {/* Map */}
         <div>
           <label className="block text-sm font-medium mb-2">Drop a pin at your delivery location</label>
-          <MapPicker onLocationSelect={handleLocationSelect} />
-          <div className="mt-2 text-sm">
-            {checking && <span className="text-gray-400">Checking delivery zone…</span>}
-            {!checking && zone === null && <span className="text-gray-400">Move the pin to your location</span>}
-            {!checking && zone === 'outside' && (
-              <span className="text-red-500 font-medium">⚠ Sorry, we don't deliver to your area yet</span>
-            )}
-            {!checking && zone && zone !== 'outside' && (
-              <span className="text-[#2D6A4F] font-medium">✓ Delivering to {zone.city}</span>
-            )}
-          </div>
+          <DeliveryMap onZoneResult={handleZoneResult} />
         </div>
 
         {/* Contact */}
         <div className="space-y-3">
           <div>
             <label className="block text-sm font-medium mb-1">Your name</label>
-            <input
-              required
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Full name"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
-            />
+            <input required value={name} onChange={e => setName(e.target.value)} placeholder="Full name"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]" />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Phone number</label>
-            <input
-              required
-              type="tel"
-              value={phone}
-              onChange={e => setPhone(e.target.value)}
-              placeholder="10-digit mobile number"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]"
-            />
+            <input required type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="10-digit mobile number"
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]" />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Delivery address (text)</label>
-            <textarea
-              required
-              value={address}
-              onChange={e => setAddress(e.target.value)}
-              placeholder="House no, street, landmark…"
-              rows={2}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] resize-none"
-            />
+            <label className="block text-sm font-medium mb-1">Delivery address / landmark</label>
+            <textarea required value={address} onChange={e => setAddress(e.target.value)} placeholder="House no, street, landmark…" rows={2}
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] resize-none" />
           </div>
         </div>
 
@@ -161,21 +158,35 @@ export default function CheckoutPage() {
               </li>
             ))}
           </ul>
-          <div className="flex justify-between font-bold border-t pt-2">
-            <span>Total</span>
-            <span className="text-[#2D6A4F]">₹{total.toFixed(2)}</span>
+          <div className="space-y-1.5 border-t pt-2 text-sm">
+            <div className="flex justify-between text-gray-500">
+              <span>Subtotal</span>
+              <span>₹{total.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-gray-500">
+              <span>Delivery Fee</span>
+              <span className="text-emerald-600 font-medium">₹0 (FREE 🎉)</span>
+            </div>
+            <div className="flex justify-between text-gray-500">
+              <span>Platform Fee</span>
+              <span className="text-emerald-600 font-medium">₹0</span>
+            </div>
+            <div className="flex justify-between font-bold text-base border-t pt-2 mt-1">
+              <span>Total to Pay</span>
+              <span className="text-emerald-700">₹{total.toFixed(2)}</span>
+            </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2">💵 Cash on Delivery</p>
+          <p className="text-xs text-gray-400 mt-2">💳 Pay via UPI / Card (Razorpay)</p>
         </div>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
 
         <button
           type="submit"
-          disabled={submitting || !zone || zone === 'outside'}
-          className="w-full bg-[#2D6A4F] text-white py-3 rounded-xl font-medium hover:bg-[#245a42] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          disabled={loading || !canPay}
+          className="w-full bg-[#2D6A4F] text-white py-3.5 rounded-xl font-semibold hover:bg-[#245a42] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
-          {submitting ? 'Placing order…' : 'Place Order'}
+          {loading ? 'Opening payment…' : `Pay ₹${total.toFixed(2)} via UPI / Card`}
         </button>
       </form>
     </div>
