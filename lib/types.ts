@@ -1,4 +1,4 @@
-export type PaymentStatus = 'pending' | 'paid' | 'failed'
+export type PaymentStatus = 'pending' | 'paid' | 'failed' | 'cod'
 export type OrderStatus = 'placed' | 'preparing' | 'out_for_delivery' | 'delivered'
 
 export interface ServiceZone {

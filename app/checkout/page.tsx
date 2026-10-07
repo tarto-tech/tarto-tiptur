@@ -13,6 +13,8 @@ declare global {
   interface Window { Razorpay: any }
 }
 
+type PaymentMethod = 'cod' | 'upi'
+
 export default function CheckoutPage() {
   const { items, total, clear } = useCart()
   const router = useRouter()
@@ -22,6 +24,7 @@ export default function CheckoutPage() {
   const [name, setName] = useState('')
   const [phone, setPhone] = useState('')
   const [address, setAddress] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('cod')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
@@ -41,68 +44,77 @@ export default function CheckoutPage() {
     })
   }
 
-  async function handlePay(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!zone || zone === 'outside' || items.length === 0) return
-
     setLoading(true)
     setError('')
 
+    const payload = {
+      amount: total,
+      items,
+      customerDetails: { name, phone, address },
+      coords,
+      zoneId: typeof zone === 'object' ? zone.id : '',
+    }
+
     try {
-      // 1. Create order on server
-      const res = await fetch('/api/razorpay/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          amount: total,
-          items,
-          customerDetails: { name, phone, address },
-          coords,
-          zoneId: zone.id,
-        }),
-      })
-      const orderData = await res.json()
-      if (!res.ok) throw new Error(orderData.error)
+      if (paymentMethod === 'cod') {
+        // ── Cash on Delivery ──────────────────────────────────────────────
+        const res = await fetch('/api/orders', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const data = await res.json()
+        if (!res.ok) throw new Error(data.error)
+        clear()
+        router.push(`/order/${data.orderId}`)
 
-      // 2. Load Razorpay SDK
-      const loaded = await loadRazorpayScript()
-      if (!loaded) throw new Error('Failed to load payment SDK')
+      } else {
+        // ── UPI / Card via Razorpay ───────────────────────────────────────
+        const res = await fetch('/api/razorpay/create-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        })
+        const orderData = await res.json()
+        if (!res.ok) throw new Error(orderData.error)
 
-      // 3. Open Razorpay modal
-      const rzp = new window.Razorpay({
-        key: orderData.keyId,
-        amount: orderData.amount,
-        currency: orderData.currency,
-        order_id: orderData.razorpayOrderId,
-        name: 'Tarto',
-        description: 'Fresh delivery — Tiptur',
-        prefill: { name, contact: phone },
-        theme: { color: '#2D6A4F' },
-        handler: async (response: any) => {
-          // 4. Verify payment on server
-          const verifyRes = await fetch('/api/razorpay/verify-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              orderId: orderData.orderId,
-              razorpayOrderId: response.razorpay_order_id,
-              razorpayPaymentId: response.razorpay_payment_id,
-              razorpaySignature: response.razorpay_signature,
-            }),
-          })
-          const verifyData = await verifyRes.json()
-          if (!verifyRes.ok) throw new Error(verifyData.error)
+        const loaded = await loadRazorpayScript()
+        if (!loaded) throw new Error('Failed to load payment SDK')
 
-          clear()
-          router.push(`/order/${orderData.orderId}`)
-        },
-        modal: {
-          ondismiss: () => setLoading(false),
-        },
-      })
-      rzp.open()
+        const rzp = new window.Razorpay({
+          key: orderData.keyId,
+          amount: orderData.amount,
+          currency: orderData.currency,
+          order_id: orderData.razorpayOrderId,
+          name: 'Tarto',
+          description: 'Fresh delivery — Tiptur',
+          prefill: { name, contact: phone },
+          theme: { color: '#2D6A4F' },
+          handler: async (response: any) => {
+            const verifyRes = await fetch('/api/razorpay/verify-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                orderId: orderData.orderId,
+                razorpayOrderId: response.razorpay_order_id,
+                razorpayPaymentId: response.razorpay_payment_id,
+                razorpaySignature: response.razorpay_signature,
+              }),
+            })
+            const verifyData = await verifyRes.json()
+            if (!verifyRes.ok) throw new Error(verifyData.error)
+            clear()
+            router.push(`/order/${orderData.orderId}`)
+          },
+          modal: { ondismiss: () => setLoading(false) },
+        })
+        rzp.open()
+      }
     } catch (err: any) {
-      setError(err.message ?? 'Payment failed. Please try again.')
+      setError(err.message ?? 'Something went wrong. Please try again.')
       setLoading(false)
     }
   }
@@ -110,18 +122,18 @@ export default function CheckoutPage() {
   if (items.length === 0) {
     return (
       <div className="max-w-lg mx-auto px-4 py-20 text-center">
-        <p className="text-gray-500">Your cart is empty. <a href="/" className="text-[#2D6A4F] underline">Go back</a></p>
+        <p className="text-gray-500">Your cart is empty. <a href="/" className="text-emerald-700 underline">Go back</a></p>
       </div>
     )
   }
 
-  const canPay = zone && zone !== 'outside' && name && phone && address
+  const canSubmit = zone && zone !== 'outside' && name && phone && address
 
   return (
-    <div className="max-w-lg mx-auto px-4 py-10">
+    <div className="max-w-lg mx-auto px-4 py-10 pb-20">
       <h1 className="text-2xl font-bold mb-6">Checkout</h1>
 
-      <form onSubmit={handlePay} className="space-y-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
         {/* Map */}
         <div>
           <label className="block text-sm font-medium mb-2">Drop a pin at your delivery location</label>
@@ -133,17 +145,50 @@ export default function CheckoutPage() {
           <div>
             <label className="block text-sm font-medium mb-1">Your name</label>
             <input required value={name} onChange={e => setName(e.target.value)} placeholder="Full name"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]" />
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700" />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Phone number</label>
             <input required type="tel" value={phone} onChange={e => setPhone(e.target.value)} placeholder="10-digit mobile number"
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F]" />
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700" />
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Delivery address / landmark</label>
             <textarea required value={address} onChange={e => setAddress(e.target.value)} placeholder="House no, street, landmark…" rows={2}
-              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#2D6A4F] resize-none" />
+              className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-700 resize-none" />
+          </div>
+        </div>
+
+        {/* Payment method */}
+        <div>
+          <label className="block text-sm font-medium mb-2">Payment method</label>
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('cod')}
+              className={`flex flex-col items-center gap-1.5 p-4 rounded-2xl border-2 transition-all ${
+                paymentMethod === 'cod'
+                  ? 'border-emerald-700 bg-emerald-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <span className="text-2xl">💵</span>
+              <span className="font-bold text-sm text-gray-900">Cash on Delivery</span>
+              <span className="text-[11px] text-gray-500">Pay when delivered</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setPaymentMethod('upi')}
+              className={`flex flex-col items-center gap-1.5 p-4 rounded-2xl border-2 transition-all ${
+                paymentMethod === 'upi'
+                  ? 'border-emerald-700 bg-emerald-50'
+                  : 'border-gray-200 bg-white hover:border-gray-300'
+              }`}
+            >
+              <span className="text-2xl">📱</span>
+              <span className="font-bold text-sm text-gray-900">UPI / Card</span>
+              <span className="text-[11px] text-gray-500">Pay now via Razorpay</span>
+            </button>
           </div>
         </div>
 
@@ -176,17 +221,20 @@ export default function CheckoutPage() {
               <span className="text-emerald-700">₹{total.toFixed(2)}</span>
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-2">💳 Pay via UPI / Card (Razorpay)</p>
         </div>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
 
         <button
           type="submit"
-          disabled={loading || !canPay}
-          className="w-full bg-[#2D6A4F] text-white py-3.5 rounded-xl font-semibold hover:bg-[#245a42] transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          disabled={loading || !canSubmit}
+          className="w-full bg-emerald-800 text-white py-3.5 rounded-xl font-semibold hover:bg-emerald-900 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
         >
-          {loading ? 'Opening payment…' : `Pay ₹${total.toFixed(2)} via UPI / Card`}
+          {loading
+            ? 'Placing order…'
+            : paymentMethod === 'cod'
+              ? `Place Order — Pay ₹${total.toFixed(2)} on Delivery`
+              : `Pay ₹${total.toFixed(2)} via UPI / Card`}
         </button>
       </form>
     </div>

@@ -30,9 +30,9 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
     <div className="max-w-lg mx-auto px-4 py-10">
       {/* Header */}
       <div className="text-center mb-8">
-        <p className="text-5xl mb-3">{order.payment_status === 'paid' ? '🎉' : '⏳'}</p>
+        <p className="text-5xl mb-3">{order.payment_status === 'paid' ? '🎉' : order.payment_status === 'cod' ? '🎉' : '⏳'}</p>
         <h1 className="text-2xl font-bold">
-          {order.payment_status === 'paid' ? 'Order Confirmed!' : 'Payment Pending'}
+          {order.payment_status === 'paid' || order.payment_status === 'cod' ? 'Order Confirmed!' : 'Payment Pending'}
         </h1>
         <p className="text-gray-500 text-sm mt-1">Order #{order.order_number}</p>
         {order.razorpay_payment_id && (
