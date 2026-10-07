@@ -37,6 +37,31 @@ const NEXT_STATUSES: Record<OrderStatus, OrderStatus[]> = {
   delivered:        [],
 }
 
+function cleanPhone(p: string) { return p.replace(/\D/g, '') }
+
+function buildRiderMsg(order: OrderWithItems) {
+  const items = (order.order_items ?? []).map(i => `• ${i.products?.name} × ${i.quantity}`).join('\n')
+  const payment = order.payment_status === 'cod' ? 'CASH ON DELIVERY' : 'PAID ONLINE'
+  return [
+    `🛵 *TARTO ORDER #${order.order_number}*`,
+    `Customer: ${order.customer_name}`,
+    `Phone: ${order.phone_number}`,
+    `Amount: ₹${Number(order.total_amount).toFixed(2)} (${payment})`,
+    '',
+    '*Items:*',
+    items,
+    '',
+    '*Delivery Pin / Location:*',
+    `https://www.google.com/maps/search/?api=1&query=${order.delivery_lat},${order.delivery_lng}`,
+    '',
+    `*Notes:* ${order.address_notes || 'None'}`,
+  ].join('\n')
+}
+
+function buildCustomerMsg(order: OrderWithItems) {
+  return `Hi ${order.customer_name}, your Tarto order #${order.order_number} is being prepared and will be out for delivery shortly!`
+}
+
 function formatTime(ts: string) {
   return new Date(ts).toLocaleString('en-IN', {
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
@@ -248,6 +273,22 @@ export default function AdminOrdersPage() {
                           {order.razorpay_payment_id && (
                             <p className="text-xs text-gray-400 mt-1">Payment: {order.razorpay_payment_id}</p>
                           )}
+                          <div className="flex gap-2 mt-3 flex-wrap">
+                            <a
+                              href={`https://wa.me/?text=${encodeURIComponent(buildRiderMsg(order))}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="text-xs px-3 py-1.5 rounded-lg font-medium bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                            >
+                              🛵 Dispatch to Rider
+                            </a>
+                            <a
+                              href={`https://wa.me/91${cleanPhone(order.phone_number)}?text=${encodeURIComponent(buildCustomerMsg(order))}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="text-xs px-3 py-1.5 rounded-lg font-medium bg-green-100 text-green-800 hover:bg-green-200 transition-colors"
+                            >
+                              💬 Ping Customer
+                            </a>
+                          </div>
                         </div>
                       </div>
 

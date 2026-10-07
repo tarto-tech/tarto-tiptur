@@ -10,6 +10,8 @@ const STEPS = [
   { key: 'delivered',         label: 'Delivered'         },
 ]
 
+const STORE_PHONE = process.env.NEXT_PUBLIC_STORE_PHONE ?? '919900000000'
+
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = createServerClient()
@@ -96,6 +98,15 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
         className="block w-full text-center bg-[#F4A261] text-white py-3 rounded-xl font-medium hover:bg-[#e8924f] transition-colors mb-4"
       >
         🗺 Open Directions for Rider
+      </a>
+
+      <a
+        href={`https://wa.me/${STORE_PHONE}?text=${encodeURIComponent(`Hi Tarto Support, I have a query regarding my order #${order.order_number}`)}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block w-full text-center bg-emerald-600 text-white py-3 rounded-xl font-medium hover:bg-emerald-700 transition-colors mb-4"
+      >
+        💬 Need help with this order? Chat on WhatsApp
       </a>
 
       <Link href="/" className="block text-center text-[#2D6A4F] font-medium hover:underline">
