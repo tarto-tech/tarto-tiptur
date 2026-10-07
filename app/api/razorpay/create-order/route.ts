@@ -4,12 +4,11 @@ import { createServerClient } from '@/lib/supabase'
 
 const DROP_LIMIT = 49
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
-})
-
 export async function POST(req: NextRequest) {
+  const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID!,
+    key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  })
   try {
     const { amount, items, customerDetails, coords, zoneId } = await req.json()
 
