@@ -5,8 +5,8 @@ import { createServerClient } from '@/lib/supabase'
 const DROP_LIMIT = 49
 
 const razorpay = new Razorpay({
-  key_id: process.env.rzp_live_Tl7Dforrq4G9NO!,
-  key_secret: process.env.qf46ezWY99nI4Qj9VX5owST0!,
+  key_id: process.env.RAZORPAY_KEY_ID!,
+  key_secret: process.env.RAZORPAY_KEY_SECRET!,
 })
 
 export async function POST(req: NextRequest) {
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       razorpayOrderId: rzpOrder.id,
       amount: rzpOrder.amount,
       currency: rzpOrder.currency,
-      keyId: process.env.rzp_live_Tl7Dforrq4G9NO,
+      keyId: process.env.RAZORPAY_KEY_ID,
     })
   } catch (err: any) {
     console.error('create-order error:', err)
