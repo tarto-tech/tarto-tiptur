@@ -125,8 +125,12 @@ export default function AdminOrdersPage() {
                       <span className={`text-xs px-2 py-1 rounded-full font-medium shrink-0 ${STATUS_BADGE[order.order_status]}`}>
                         {STATUS_LABEL[order.order_status]}
                       </span>
-                      <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${order.payment_status === 'paid' ? 'bg-green-50 text-green-600' : 'bg-yellow-50 text-yellow-600'}`}>
-                        {order.payment_status === 'paid' ? '✓ Paid' : '⏳ Pending'}
+                      <span className={`text-xs px-2 py-1 rounded-full shrink-0 ${
+                        order.payment_status === 'paid' ? 'bg-green-50 text-green-600' 
+                        : order.payment_status === 'cod' ? 'bg-blue-50 text-blue-600'
+                        : 'bg-yellow-50 text-yellow-600'
+                      }`}>
+                        {order.payment_status === 'paid' ? '✓ Paid' : order.payment_status === 'cod' ? '💵 COD' : '⏳ Pending'}
                       </span>
                       <span className="text-xs text-gray-400 hidden lg:block shrink-0">{formatTime(order.created_at)}</span>
                       <span className="text-gray-400 text-xs ml-auto">{isOpen ? '▲' : '▼'}</span>
