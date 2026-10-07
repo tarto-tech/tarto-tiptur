@@ -146,11 +146,18 @@ export default function AdminOrdersPage() {
                           <a href={`tel:${order.phone_number}`} className="text-sm text-[#2D6A4F] underline">{order.phone_number}</a>
                           <p className="text-sm text-gray-600 mt-1">{order.address_notes}</p>
                           <a
-                            href={`https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat},${order.delivery_lng}`}
+                            href={`https://www.google.com/maps/search/?api=1&query=${order.delivery_lat},${order.delivery_lng}`}
                             target="_blank" rel="noopener noreferrer"
                             className="text-xs text-blue-500 underline mt-1 inline-block"
                           >
-                            🗺 Open directions
+                            📍 View on map
+                          </a>
+                          <a
+                            href={`https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat},${order.delivery_lng}`}
+                            target="_blank" rel="noopener noreferrer"
+                            className="text-xs text-emerald-600 underline mt-1 ml-3 inline-block"
+                          >
+                            🗺 Get directions
                           </a>
                         </div>
                         <div>

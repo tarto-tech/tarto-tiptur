@@ -24,7 +24,7 @@ export default async function OrderPage({ params }: { params: Promise<{ id: stri
   const orderItems = (itemsResult.data ?? []) as (OrderItem & { products: { name: string; unit: string } })[]
 
   const currentStep = STEPS.findIndex(s => s.key === order.order_status)
-  const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${order.delivery_lat},${order.delivery_lng}`
+  const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${order.delivery_lat},${order.delivery_lng}`
 
   return (
     <div className="max-w-lg mx-auto px-4 py-10">
