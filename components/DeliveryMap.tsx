@@ -1,115 +1,107 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useState } from 'react'
+import { MapPin, Navigation, AlertTriangle, CheckCircle2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 
 interface Props {
   onZoneResult: (lat: number, lng: number, zone: { id: string; city: string } | null) => void
 }
 
-const DEFAULT_LAT = 13.2575
-const DEFAULT_LNG = 76.4800
-
 export default function DeliveryMap({ onZoneResult }: Props) {
-  const mapRef = useRef<HTMLDivElement>(null)
-  const mapInstanceRef = useRef<any>(null)
-  const markerRef = useRef<any>(null)
-  const [locating, setLocating] = useState(false)
-  const [status, setStatus] = useState<'idle' | 'checking' | 'inside' | 'outside'>('idle')
-  const [cityName, setCityName] = useState('')
-  const checkTimeout = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'success' | 'denied' | 'outside'>('idle')
+  const [message, setMessage] = useState('')
 
-  async function checkZone(lat: number, lng: number) {
-    setStatus('checking')
-    if (checkTimeout.current) clearTimeout(checkTimeout.current)
-    checkTimeout.current = setTimeout(async () => {
-      const { data } = await supabase.rpc('check_delivery_zone', { user_lat: lat, user_lng: lng } as any)
-      const rows = data as { zone_id: string; city_name: string }[] | null
-      if (rows && rows.length > 0) {
-        setStatus('inside')
-        setCityName(rows[0].city_name)
-        onZoneResult(lat, lng, { id: rows[0].zone_id, city: rows[0].city_name })
-      } else {
-        setStatus('outside')
-        onZoneResult(lat, lng, null)
-      }
-    }, 500)
-  }
-
-  useEffect(() => {
-    if (typeof window === 'undefined' || mapInstanceRef.current) return
-
-    import('leaflet').then(L => {
-      delete (L.Icon.Default.prototype as any)._getIconUrl
-      L.Icon.Default.mergeOptions({
-        iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-      })
-
-      if ((mapRef.current as any)._leaflet_id) return
-      const map = L.map(mapRef.current!).setView([DEFAULT_LAT, DEFAULT_LNG], 14)
-      mapInstanceRef.current = map
-
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-      }).addTo(map)
-
-      const marker = L.marker([DEFAULT_LAT, DEFAULT_LNG], { draggable: true }).addTo(map)
-      markerRef.current = marker
-      checkZone(DEFAULT_LAT, DEFAULT_LNG)
-
-      marker.on('dragend', () => {
-        const { lat, lng } = marker.getLatLng()
-        checkZone(lat, lng)
-      })
-
-      map.on('click', (e: any) => {
-        marker.setLatLng(e.latlng)
-        checkZone(e.latlng.lat, e.latlng.lng)
-      })
-    })
-
-    return () => {
-      mapInstanceRef.current?.remove()
-      mapInstanceRef.current = null
+  function fetchLocation() {
+    if (!navigator.geolocation) {
+      setStatus('denied')
+      setMessage('Geolocation is not supported by your browser.')
+      return
     }
-  }, [])
+    setLoading(true)
+    setStatus('idle')
 
-  function useMyLocation() {
-    setLocating(true)
     navigator.geolocation.getCurrentPosition(
-      pos => {
-        const { latitude: lat, longitude: lng } = pos.coords
-        markerRef.current?.setLatLng([lat, lng])
-        mapInstanceRef.current?.setView([lat, lng], 15)
-        checkZone(lat, lng)
-        setLocating(false)
+      async ({ coords: { latitude, longitude, accuracy } }) => {
+        const { data, error } = await supabase.rpc('check_delivery_zone', {
+          user_lat: latitude,
+          user_lng: longitude,
+        } as any)
+        setLoading(false)
+        const rows = data as { zone_id: string; city_name: string }[] | null
+        if (error || !rows || rows.length === 0) {
+          setStatus('outside')
+          setMessage("You are currently outside our delivery zone.")
+          onZoneResult(latitude, longitude, null)
+        } else {
+          setStatus('success')
+          setMessage(`Verified: ${rows[0].city_name} (±${Math.round(accuracy)}m)`)
+          onZoneResult(latitude, longitude, { id: rows[0].zone_id, city: rows[0].city_name })
+        }
       },
-      () => setLocating(false)
+      (err) => {
+        setLoading(false)
+        setStatus('denied')
+        setMessage(
+          err.code === err.PERMISSION_DENIED
+            ? 'Location permission denied. Please allow access in your browser settings.'
+            : 'Unable to get location. Ensure your device GPS is on.'
+        )
+        onZoneResult(0, 0, null)
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     )
   }
 
   return (
-    <div className="space-y-2">
-      <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-      <div className="relative">
-        <div ref={mapRef} className="h-64 w-full rounded-xl overflow-hidden border border-gray-200" />
+    <div className="bg-white rounded-2xl p-4 border border-gray-100 shadow-sm space-y-3">
+      <label className="text-sm font-bold text-gray-900 flex items-center gap-1.5">
+        <MapPin className="w-4 h-4 text-emerald-600" />
+        Delivery Location (GPS Required)
+      </label>
+
+      {status !== 'success' && (
         <button
           type="button"
-          onClick={useMyLocation}
-          disabled={locating}
-          className="absolute bottom-3 left-3 z-[1000] bg-white text-sm px-3 py-1.5 rounded-lg shadow border border-gray-200 hover:bg-gray-50 disabled:opacity-60"
+          onClick={fetchLocation}
+          disabled={loading}
+          className="w-full flex items-center justify-center gap-2 bg-emerald-700 hover:bg-emerald-800 text-white font-bold py-3 px-4 rounded-xl transition disabled:opacity-60"
         >
-          {locating ? 'Locating…' : '📍 Use my location'}
+          <Navigation className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          {loading ? 'Detecting location…' : 'Allow GPS & Verify Location'}
         </button>
-      </div>
-      <div className="text-sm min-h-[20px]">
-        {status === 'checking' && <span className="text-gray-400">Checking delivery zone…</span>}
-        {status === 'idle' && <span className="text-gray-400">Tap the map or drag the pin to your location</span>}
-        {status === 'inside' && <span className="text-[#2D6A4F] font-medium">✓ Delivering to {cityName}</span>}
-        {status === 'outside' && <span className="text-red-500 font-medium">⚠ Sorry, we don't deliver to your area yet</span>}
-      </div>
+      )}
+
+      {status === 'success' && (
+        <div className="flex items-start gap-2 bg-emerald-50 text-emerald-900 p-3 rounded-xl border border-emerald-200">
+          <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+          <div className="text-xs">
+            <p className="font-bold">GPS Location Verified</p>
+            <p className="text-emerald-700 mt-0.5">{message}</p>
+          </div>
+        </div>
+      )}
+
+      {status === 'denied' && (
+        <div className="flex items-start gap-2 bg-red-50 text-red-900 p-3 rounded-xl border border-red-200">
+          <AlertTriangle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div className="text-xs">
+            <p className="font-bold">Permission Required</p>
+            <p className="text-red-700 mt-0.5">{message}</p>
+          </div>
+        </div>
+      )}
+
+      {status === 'outside' && (
+        <div className="flex items-start gap-2 bg-amber-50 text-amber-900 p-3 rounded-xl border border-amber-200">
+          <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="text-xs">
+            <p className="font-bold">Outside Service Area</p>
+            <p className="text-amber-800 mt-0.5">{message}</p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

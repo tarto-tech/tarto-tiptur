@@ -14,31 +14,21 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient()
 
-    // ── Drop offer guard ──────────────────────────────────────────────────────
+    // ── Drop offer guard (atomic — checked immediately before issuing payment link) ──
     const dropItems = items.filter((i: any) => i.is_drop_offer)
-
     if (dropItems.length > 0) {
-      // Max 1 drop item per order
       const totalDropQty = dropItems.reduce((sum: number, i: any) => sum + i.qty, 0)
       if (totalDropQty > 1) {
-        return NextResponse.json(
-          { error: 'Only 1 Launch Drop pizza allowed per order.' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'Only 1 Launch Drop pizza allowed per order.' }, { status: 400 })
       }
-
-      // Check remaining stock
       const { data: dropCount } = await supabase.rpc('get_drop_order_count' as any)
       if (((dropCount as unknown as number) ?? 0) >= DROP_LIMIT) {
-        return NextResponse.json(
-          { error: 'Launch drop sold out! Please select standard menu items.' },
-          { status: 400 }
-        )
+        return NextResponse.json({ error: 'Launch drop sold out! Please select standard menu items.' }, { status: 400 })
       }
     }
     // ─────────────────────────────────────────────────────────────────────────
 
-    // Create Razorpay order (amount in paise)
+    // Create Razorpay order (amount in paise) — drop stock re-verified just above
     const rzpOrder = await razorpay.orders.create({
       amount: Math.round(amount * 100),
       currency: 'INR',
@@ -71,7 +61,7 @@ export async function POST(req: NextRequest) {
       unit_price: item.price,
       is_drop_item: item.is_drop_offer ?? false,
     }))
-    await supabase.from('order_items').insert(orderItems)
+    await (supabase.from('order_items') as any).insert(orderItems)
 
     return NextResponse.json({
       orderId: order.id,

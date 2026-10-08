@@ -10,7 +10,7 @@ const STEPS = [
   { key: 'delivered',         label: 'Delivered'         },
 ]
 
-const STORE_PHONE = process.env.NEXT_PUBLIC_STORE_PHONE ?? '919900000000'
+const STORE_PHONE = process.env.NEXT_PUBLIC_STORE_PHONE ?? '917411104601'
 
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params

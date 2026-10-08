@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       unit_price: item.price,
       is_drop_item: item.is_drop_offer ?? false,
     }))
-    await supabase.from('order_items').insert(orderItems)
+    await (supabase.from('order_items') as any).insert(orderItems)
 
     return NextResponse.json({ orderId: order.id })
   } catch (err: any) {

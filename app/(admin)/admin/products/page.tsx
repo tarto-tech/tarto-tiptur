@@ -18,9 +18,18 @@ export default function AdminProductsPage() {
   const [showForm, setShowForm] = useState(false)
   const [saving, setSaving] = useState(false)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
   const [imageFile, setImageFile] = useState<File | null>(null)
   const [imagePreview, setImagePreview] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  async function resetDropCounter() {
+    if (!confirm('Reset the drop counter to 0? This marks all previous drop orders as non-drop so the 49-pizza offer restarts.')) return
+    setResetting(true)
+    await (supabase.from('order_items') as any).update({ is_drop_item: false }).eq('is_drop_item', true)
+    setResetting(false)
+    alert('Drop counter reset! The offer is live again from 0.')
+  }
 
   async function fetchProducts() {
     const { data } = await (supabase.from('products') as any).select('*').order('created_at')
@@ -200,7 +209,16 @@ export default function AdminProductsPage() {
                   <div className="flex items-center gap-1.5">
                     <p className="font-medium text-sm truncate">{product.name}</p>
                     {product.is_drop_offer && (
-                      <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full shrink-0">DROP</span>
+                      <>
+                        <span className="text-[10px] bg-amber-100 text-amber-700 font-bold px-2 py-0.5 rounded-full shrink-0">DROP</span>
+                        <button
+                          onClick={resetDropCounter}
+                          disabled={resetting}
+                          className="text-[10px] bg-red-100 text-red-700 font-bold px-2 py-0.5 rounded-full shrink-0 hover:bg-red-200 disabled:opacity-50"
+                        >
+                          {resetting ? 'Resetting…' : '🔄 Reset Counter'}
+                        </button>
+                      </>
                     )}
                   </div>
                   <p className="text-xs text-gray-400">{product.category} · {product.unit}</p>
