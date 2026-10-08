@@ -95,20 +95,30 @@ export default function StoreFront({ products, dropRemaining }: Props) {
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1">
                   <span className="inline-block bg-amber-400 text-emerald-950 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md mb-2">
-                    🚀 LAUNCH OFFER
+                    {dropSoldOut ? '🚫 OFFER CLOSED' : '🚀 LAUNCH OFFER'}
                   </span>
                   <h2 className="text-white font-black text-lg leading-tight">{dropProduct.name}</h2>
                   <p className="text-emerald-100/80 text-xs mt-1 leading-relaxed">
                     Freshly baked 7-inch Veg Cheese Pizza delivered straight to your door in Tiptur.
                   </p>
                   <div className="flex items-baseline gap-2 mt-2">
-                    <span className="text-white font-black text-2xl">₹{dropProduct.price}</span>
-                    {dropProduct.original_price && (
-                      <span className="text-red-300 line-through text-sm font-medium">₹{dropProduct.original_price}</span>
+                    {dropSoldOut ? (
+                      <>
+                        <span className="text-white font-black text-2xl">₹199</span>
+                        <span className="text-red-300 line-through text-sm font-medium">₹129 offer</span>
+                        <span className="bg-red-500/50 text-red-100 text-[10px] font-bold px-2 py-0.5 rounded-full">Offer Closed</span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-white font-black text-2xl">₹{dropProduct.price}</span>
+                        {dropProduct.original_price && (
+                          <span className="text-red-300 line-through text-sm font-medium">₹{dropProduct.original_price}</span>
+                        )}
+                        <span className="bg-emerald-500/40 text-emerald-100 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                          Save ₹{(dropProduct.original_price ?? 0) - dropProduct.price}
+                        </span>
+                      </>
                     )}
-                    <span className="bg-emerald-500/40 text-emerald-100 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                      Save ₹{(dropProduct.original_price ?? 0) - dropProduct.price}
-                    </span>
                   </div>
                 </div>
                 {/* Add button */}
@@ -118,9 +128,12 @@ export default function StoreFront({ products, dropRemaining }: Props) {
                     const qty = cartItem?.qty ?? 0
                     if (dropSoldOut) {
                       return (
-                        <span className="bg-red-500/80 text-white text-xs font-bold px-4 py-2.5 rounded-xl block text-center">
-                          SOLD OUT
-                        </span>
+                        <div className="text-center">
+                          <span className="bg-red-500/80 text-white text-xs font-bold px-4 py-2.5 rounded-xl block">
+                            🚫 Offer Closed
+                          </span>
+                          <p className="text-white/60 text-[10px] mt-1">Now ₹199</p>
+                        </div>
                       )
                     }
                     if (qty > 0) {

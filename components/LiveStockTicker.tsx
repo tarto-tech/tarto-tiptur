@@ -46,27 +46,37 @@ export default function LiveStockTicker({ initial }: { initial: number }) {
 
       {/* Body */}
       <div className="px-4 py-3">
-        <p className="text-gray-900 font-black text-sm leading-snug">
-          Veg Cheese Pizza @ <span className="text-emerald-700">₹129 flat</span>
-          <span className="ml-1.5 text-gray-400 line-through font-normal text-xs">₹199</span>
-        </p>
-        <p className="text-[11px] text-gray-500 mt-0.5 font-medium">
-          ✅ FREE Delivery &nbsp;·&nbsp; Zero Platform Fees &nbsp;·&nbsp; No Hidden Charges
-        </p>
-
-        {/* Progress bar */}
-        {!soldOut && (
-          <div className="mt-2.5">
-            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-700"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-            <p className="text-[10px] text-gray-400 mt-1 font-medium">
-              {sold} sold · <span className="text-orange-600 font-bold">ONLY {remaining} OF {DROP_LIMIT} LEFT!</span>
+        {soldOut ? (
+          <>
+            <p className="text-gray-900 font-black text-sm leading-snug">
+              Veg Cheese Pizza @ <span className="text-gray-700">₹199</span>
+              <span className="ml-1.5 text-red-400 line-through font-normal text-xs">₹129 offer</span>
             </p>
-          </div>
+            <p className="text-[11px] text-red-600 mt-1 font-semibold">
+              🚫 Launch offer closed — all 49 pizzas claimed! Now available at regular price ₹199.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="text-gray-900 font-black text-sm leading-snug">
+              Veg Cheese Pizza @ <span className="text-emerald-700">₹129 flat</span>
+              <span className="ml-1.5 text-gray-400 line-through font-normal text-xs">₹199</span>
+            </p>
+            <p className="text-[11px] text-gray-500 mt-0.5 font-medium">
+              ✅ FREE Delivery &nbsp;·&nbsp; Zero Platform Fees &nbsp;·&nbsp; No Hidden Charges
+            </p>
+            <div className="mt-2.5">
+              <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-700"
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <p className="text-[10px] text-gray-400 mt-1 font-medium">
+                {sold} sold · <span className="text-orange-600 font-bold">ONLY {remaining} OF {DROP_LIMIT} LEFT!</span>
+              </p>
+            </div>
+          </>
         )}
       </div>
     </div>
