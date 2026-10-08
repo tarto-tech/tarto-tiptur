@@ -32,7 +32,7 @@ export default function DeliveryMap({ onZoneResult }: Props) {
         const rows = data as { zone_id: string; city_name: string }[] | null
         if (error || !rows || rows.length === 0) {
           setStatus('outside')
-          setMessage("You are currently outside our delivery zone.")
+          setMessage(error?.message ?? "You are currently outside our delivery zone.")
           onZoneResult(latitude, longitude, null)
         } else {
           setStatus('success')
