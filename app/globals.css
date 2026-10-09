@@ -16,3 +16,38 @@ html {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
+
+/* ── Hero price pulse glow ── */
+@keyframes pricePulse {
+  0%, 100% { opacity: 1; text-shadow: 0 0 8px rgba(251,191,36,0.3); }
+  50%       { opacity: 0.75; text-shadow: 0 0 24px rgba(251,191,36,0.95), 0 0 40px rgba(251,191,36,0.5); }
+}
+.price-pulse {
+  animation: pricePulse 1.6s ease-in-out infinite;
+}
+
+/* ── ADD button shimmer ── */
+@keyframes shimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+.add-shimmer {
+  background: linear-gradient(
+    105deg,
+    #fbbf24 40%,
+    #fef08a 50%,
+    #fbbf24 60%
+  );
+  background-size: 200% auto;
+  animation: shimmer 2s linear infinite;
+}
+
+/* ── Marquee scrolling ── */
+@keyframes marquee {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.marquee-track {
+  animation: marquee 12s linear infinite;
+  width: max-content;
+}

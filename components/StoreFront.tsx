@@ -78,7 +78,7 @@ export default function StoreFront({ products, dropRemaining }: Props) {
       </header>
 
       {/* Live Stock Ticker */}
-      <LiveStockTicker initial={dropRemaining} />
+      <LiveStockTicker initial={dropRemaining} pizzaImageUrl={dropProduct?.image_url ?? undefined} />
 
       {/* Hero Pizza Card */}
       {dropProduct && (
@@ -110,7 +110,7 @@ export default function StoreFront({ products, dropRemaining }: Props) {
                       </>
                     ) : (
                       <>
-                        <span className="text-white font-black text-2xl">₹{dropProduct.price}</span>
+                        <span className="price-pulse text-amber-300 font-black text-3xl drop-shadow-lg">₹{dropProduct.price}</span>
                         {dropProduct.original_price && (
                           <span className="text-red-300 line-through text-sm font-medium">₹{dropProduct.original_price}</span>
                         )}
@@ -152,7 +152,7 @@ export default function StoreFront({ products, dropRemaining }: Props) {
                     return (
                       <button
                         onClick={() => handleAdd(dropProduct)}
-                        className="bg-amber-400 text-emerald-950 font-black text-sm px-5 py-2.5 rounded-xl active:scale-95 transition shadow-lg"
+                        className="add-shimmer bg-amber-400 text-emerald-950 font-black text-sm px-5 py-2.5 rounded-xl active:scale-95 transition shadow-lg"
                       >
                         ADD
                       </button>

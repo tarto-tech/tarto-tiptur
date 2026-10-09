@@ -5,11 +5,10 @@ import { supabase } from '@/lib/supabase'
 
 const DROP_LIMIT = 49
 
-export default function LiveStockTicker({ initial }: { initial: number }) {
+export default function LiveStockTicker({ initial, pizzaImageUrl }: { initial: number; pizzaImageUrl?: string }) {
   const [remaining, setRemaining] = useState(initial)
 
   useEffect(() => {
-    // Realtime: recount whenever an order is inserted or updated to 'paid'
     const channel = supabase
       .channel('drop-stock')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async () => {
@@ -17,7 +16,6 @@ export default function LiveStockTicker({ initial }: { initial: number }) {
         setRemaining(Math.max(0, DROP_LIMIT - ((data as unknown as number) ?? 0)))
       })
       .subscribe()
-
     return () => { supabase.removeChannel(channel) }
   }, [])
 
@@ -27,15 +25,14 @@ export default function LiveStockTicker({ initial }: { initial: number }) {
 
   return (
     <div className={`mx-4 mt-3 rounded-2xl overflow-hidden border ${soldOut ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50'}`}>
+
       {/* Top strip */}
       <div className={`px-4 py-2.5 flex items-center justify-between ${soldOut ? 'bg-red-500' : 'bg-gradient-to-r from-amber-500 to-orange-500'}`}>
         <div className="flex items-center gap-2">
           <span className="text-white text-sm font-black tracking-tight">
             {soldOut ? '🚫 SOLD OUT' : '🔥 LAUNCH DROP'}
           </span>
-          <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
-            LIMITED
-          </span>
+          <span className="bg-white/20 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">LIMITED</span>
         </div>
         {!soldOut && (
           <span className="text-white font-black text-sm">
@@ -44,8 +41,21 @@ export default function LiveStockTicker({ initial }: { initial: number }) {
         )}
       </div>
 
+      {/* Marquee — only when active */}
+      {!soldOut && (
+        <div className="bg-amber-400 overflow-hidden py-1">
+          <div className="marquee-track flex gap-8 whitespace-nowrap">
+            {[...Array(6)].map((_, i) => (
+              <span key={i} className="text-[11px] font-black text-emerald-950 shrink-0">
+                🍕 OFFER ONLY FOR 49 · CLOSING SOON · GRAB YOURS NOW ·
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Body */}
-      <div className="px-4 py-3">
+      <div className="relative px-4 py-3">
         {soldOut ? (
           <>
             <p className="text-gray-900 font-black text-sm leading-snug">
@@ -58,14 +68,14 @@ export default function LiveStockTicker({ initial }: { initial: number }) {
           </>
         ) : (
           <>
-            <p className="text-gray-900 font-black text-sm leading-snug">
+            <p className="text-gray-900 font-black text-sm leading-snug pr-16">
               Veg Cheese Pizza @ <span className="text-emerald-700">₹129 flat</span>
               <span className="ml-1.5 text-gray-400 line-through font-normal text-xs">₹199</span>
             </p>
-            <p className="text-[11px] text-gray-500 mt-0.5 font-medium">
+            <p className="text-[11px] text-gray-500 mt-0.5 font-medium pr-16">
               ✅ FREE Delivery &nbsp;·&nbsp; Zero Platform Fees &nbsp;·&nbsp; No Hidden Charges
             </p>
-            <div className="mt-2.5">
+            <div className="mt-2.5 pr-16">
               <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
                 <div
                   className="h-full bg-gradient-to-r from-amber-400 to-orange-500 rounded-full transition-all duration-700"
@@ -76,6 +86,17 @@ export default function LiveStockTicker({ initial }: { initial: number }) {
                 {sold} sold · <span className="text-orange-600 font-bold">ONLY {remaining} OF {DROP_LIMIT} LEFT!</span>
               </p>
             </div>
+
+            {/* Pizza photo — bottom right */}
+            {pizzaImageUrl && (
+              <div className="absolute bottom-0 right-3 w-16 h-16">
+                <img
+                  src={pizzaImageUrl}
+                  alt="Veg Cheese Pizza"
+                  className="w-full h-full object-cover rounded-full border-2 border-amber-300 shadow-md"
+                />
+              </div>
+            )}
           </>
         )}
       </div>
