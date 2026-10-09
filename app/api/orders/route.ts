@@ -5,11 +5,24 @@ const DROP_LIMIT = 49
 
 export async function POST(req: NextRequest) {
   try {
-    const { amount, items, customerDetails, coords } = await req.json()
+    const { items, customerDetails, coords } = await req.json()
     const supabase = createServerClient()
 
-    const dropItems = items.filter((i: any) => i.is_drop_offer)
-    const regularItems = items.filter((i: any) => !i.is_drop_offer)
+    // Recalculate amount server-side from DB prices
+    const productIds = items.map((i: any) => i.id)
+    const { data: dbProducts, error: priceError } = await (supabase.from('products') as any)
+      .select('id, price, is_drop_offer')
+      .in('id', productIds)
+    if (priceError || !dbProducts) throw new Error('Failed to verify product prices')
+
+    const priceMap = Object.fromEntries((dbProducts as any[]).map((p: any) => [p.id, p]))
+    const amount = items.reduce((sum: number, i: any) => {
+      const p = priceMap[i.id]
+      return sum + (p ? Number(p.price) * i.qty : 0)
+    }, 0)
+
+    const dropItems = items.filter((i: any) => priceMap[i.id]?.is_drop_offer)
+    const regularItems = items.filter((i: any) => !priceMap[i.id]?.is_drop_offer)
 
     // ── Drop item: atomic check+insert via Postgres function ──────────────
     if (dropItems.length > 0) {
@@ -27,7 +40,7 @@ export async function POST(req: NextRequest) {
         p_lng:           coords.lng,
         p_amount:        amount,
         p_product_id:    dropItem.id,
-        p_unit_price:    dropItem.price,
+        p_unit_price:    priceMap[dropItem.id]?.price ?? dropItem.price,
         p_drop_limit:    DROP_LIMIT,
       })
 

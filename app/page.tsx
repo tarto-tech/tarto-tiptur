@@ -7,7 +7,7 @@ export const dynamic = 'force-dynamic'
 
 export const metadata: Metadata = {
   title: 'Tarto — Fresh Delivery in Tiptur',
-  description: 'Order fresh milk, eggs, bread, pizza and more. Fast local delivery in Tiptur, Karnataka. Pay via UPI.',
+  description: 'Order fresh milk, eggs, bread, pizza and more. Fast local delivery in Tiptur, Karnataka. Cash on delivery.',
 }
 
 export const DROP_LIMIT = 49

@@ -48,7 +48,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const updateQty = useCallback((id: string, qty: number) => {
-    if (qty < 1) return
+    if (qty < 1) {
+      setItems(prev => prev.filter(i => i.id !== id))
+      return
+    }
     setItems(prev => prev.map(i => i.id === id ? { ...i, qty } : i))
   }, [])
 
